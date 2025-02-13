@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+	<body>
+		<form>
+			<input type="file" accept=".csv" onchange=read(this)> <br />
+			<label for="team1">Choose Home Team:</label>
+			<select name="homeTeam" id="homeTeam">
+  				<option value="">---</option>
+			</select>
+		
+		  <br />
+			<label for="team2">Choose Away Team:</label>
+			<select name="awayTeam" id="awayTeam">
+  				<option value="">---</option>
+			</select>
+			<br>
+			<label for="team2">Neutral Site:</label>
+			<select name="neutral" id="neutral">
+  				<option value="">---</option>
+  				<option value="Y">Yes</option>
+  				<option value="N">No</option>
+			</select>
+			<br>
+			<button type="button" onclick="Submit();">Submit</button>
+			
+			<div class="output"></div>
+		</form>
+	</body>
+	<script>
+	
+	/* 
+	* Dataset copyright of Kenpom. https://kenpom.com/
+	* Algorithm inspired by The NBA Analyst. https://thenbaanalyst.wixsite.com/thenbaanalyst/post/project-using-kenpom-to-predict-cbb-game-odds-and-scores/
+	*/
+	
+	/* Load our CSV file using a constant called in a function to read input. */
+		const reader = new FileReader();
+		var averageAdjustedOffense = 0;
+		var averageAdjustedPace = 0;
+		var array;
+		var homeTeam;
+		var awayTeam;
+		var homeTeamAdjO;
+		var homeTeamAdjO;
+		var awayTeamAdjD;
+		var awayTeamAdjO;
+		var homeTeamPace;
+		var awayTeamPace;
+
+	// Read the CSV file as plain text when input.
+		function read(input){
+			const csv = input.files[0];
+			reader.readAsText(csv);
+		}
+	
+		reader.onload = function(e){
+		
+			var kenPom = e.target.result;
+			document.querySelector('.output').innerText = kenPom;
+			var i = 0;
+		
+			array = kenPom.split(/\r?\n/);
+			
+		// Populate home Team drop down. 
+			for (row of array) {
+				temp = row.split(',');
+				var element = document.createElement("option");
+				element.textContent = temp[1];
+				element.value = temp[1];
+				document.getElementById("homeTeam").appendChild(element);
+				if(i > 0) {
+					averageAdjustedOffense = averageAdjustedOffense + parseInt(temp[5]);
+					averageAdjustedPace = averageAdjustedPace + parseInt(temp[9]);
+				}
+				i++;
+			}
+			
+			
+		// Populate away Team drop down.
+			for (row of array) {
+				temp = row.split(',');
+				var element = document.createElement("option");
+				element.textContent = temp[1];
+				element.value = temp[1];
+				document.getElementById("awayTeam").appendChild(element);
+			}
+			
+			averageAdjustedOffense = averageAdjustedOffense / i;
+			averageAdjustedPace = averageAdjustedPace / i;
+		
+		// Remove header row from KenPom CSV file.
+			document.getElementById("homeTeam").options[1].remove();
+			document.getElementById("awayTeam").options[1].remove();
+			
+		}
+	
+	/* Submit our chosen teams. The function will collect the data that is input, format it into an array, then run the simulation. */	
+	function Submit(){
+		
+		/* 
+		* AdjO - Adjusted offensive efficiency
+		* AdjD - Adjusted defensive efficiency
+		* AdjT - Adjusted tempo
+		*/
+	
+		const avgAdjO = averageAdjustedOffense;
+		const avgPace = averageAdjustedPace;
+		
+		// Collect the string for homeTeam and awayTeam inputs so the team names are listed in the alerts.
+		homeTeam = document.getElementById("homeTeam").value;
+		awayTeam = document.getElementById("awayTeam").value;
+		
+		// Format the data into an array.
+		for (row of array){
+			team = row.split(',');
+			if (homeTeam == team[1]){
+				homeTeamAdjO = team[5];
+				homeTeamAdjD = team[7];
+				homeTeamPace = team[9];
+			}	
+			if (awayTeam == team[1]){
+				awayTeamAdjD = team[7];
+				awayTeamAdjO = team[5];
+				awayTeamPace = team[9];
+			}
+		}
+	
+		// Collect the values of neutral, homeTeam, awayTeam for the simulation.
+		var neutralSite = document.getElementById("neutral").value;
+		var homeTeamValue = document.getElementById("homeTeam").value;
+		var awayTeamValue = document.getElementById("awayTeam").value;
+		
+		// This is just the default values for the algorithm. If you modify this, the final results will look really strange.
+		var homeProjOffRating = 0;
+		var awayProjOffRating = 0;
+		var adjPace = 0;
+		var homeProPoints = 0;
+		var awayProPoints = 0;
+		var homeWinExp = 0;
+		var awayWinExp = 0;
+		var sumWinExp = 0;
+		var powerOf = 10.25;
+		
+		/* 
+		* If a neutral site is chosen, we will run the algorithm with no advantages to the home team
+		* If a neutral site is not chosen, we will run the algorithm with a 1.024 scoring advantage to the home team.
+		* This algorithm is simple. It is described in the foot notes below.
+		*/
+
+		if (neutralSite == "Y") {
+			// Home Team adjusted offense minus average adjusted offense divided by average adjusted offense.
+			// Add the away team adjusted defense then do the same as said above, then multiply the result times the adjusted offense.
+			homeProjOffRating = ( ( ( ( (homeTeamAdjO)-avgAdjO)/avgAdjO + ((awayTeamAdjD)-avgAdjO)/avgAdjO)+1) * avgAdjO);
+			awayProjOffRating = ( ( ( ( (awayTeamAdjO)-avgAdjO)/avgAdjO + ((homeTeamAdjD)-avgAdjO)/avgAdjO)+1) * avgAdjO);
+			// alert(homeTeamValue + " Rating: " + homeProjOffRating + "\n " + awayTeamValue + " Rating: " +awayProjOffRating); (This just displays the rating)
+		
+		}
+		else if (neutralSite == "N") {
+			// This algorithm is the exact same as the neutralSite one except the home team is given a 1.024 multiplier towards their score.
+			homeProjOffRating = ( ( ( ( (homeTeamAdjO*1.024)-avgAdjO)/avgAdjO + ((awayTeamAdjD)-avgAdjO)/avgAdjO)+1) * avgAdjO);
+			awayProjOffRating = ( ( ( ( (awayTeamAdjO - (awayTeamAdjO*0.014))-avgAdjO)/avgAdjO + ((homeTeamAdjD)-avgAdjO)/avgAdjO)+1) * avgAdjO);
+		
+		}
+	
+		/* Calculate the pace for each team. */
+		// Obtain adjusted pace by multiplying home team and away team pace, then divide it by average pace.
+		adjPace = (homeTeamPace* awayTeamPace) / avgPace;
+		
+		// Obtain the home and away team adjusted paces by obtaining a random number between 75% and 100% possible pace.
+		homeTeamPaceAdj = Math.floor(Math.random()*(homeTeamPace - (homeTeamPace*0.75) + 1) + (homeTeamPace*0.75));
+		awayTeamPaceAdj = Math.floor(Math.random()*(awayTeamPace - (awayTeamPace*0.75) + 1) + (awayTeamPace*0.75));
+			
+		homeProjPoints = Math.round ((homeProjOffRating/100) * homeTeamPaceAdj);
+		awayProjPoints = Math.round((awayProjOffRating/100) * awayTeamPaceAdj);
+		
+		// homeProjPoints = Math.round ((homeProjOffRating/100) * adjPace);
+		// awayProjPoints = Math.round((awayProjOffRating/100) * adjPace);
+		
+
+		// Output the simulation results with the final scores and win percentages. Calculate the win percentages using power rankings provided in the kenpom dataset.
+		alert(homeTeamValue + " Pts: " + homeProjPoints + "\n" + awayTeamValue + " Pts: " + awayProjPoints);		
+			
+		homeWinExp = Math.pow(homeProjOffRating, powerOf) / (Math.pow(homeProjOffRating,powerOf) + Math.pow(awayProjOffRating,powerOf));
+		awayWinExp = Math.pow(awayProjOffRating, powerOf) / (Math.pow(awayProjOffRating,powerOf) + Math.pow(homeProjOffRating,powerOf));		sumWinExp = homeWinExp + awayWinExp;
+		
+		homeWinExp = Math.round(homeWinExp*100/sumWinExp);
+		awayWinExp = Math.round(awayWinExp*100/sumWinExp);
+		
+		alert(homeTeamValue + " Win %: " + homeWinExp + "\n" + awayTeamValue + " Win %: " + awayWinExp);
+		
+		
+	// End function	
+	}
+	
+	
+		</script>
+</html>

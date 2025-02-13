@@ -4,7 +4,7 @@ This is a simple web-based simulation tool that uses KenPom dataset values to si
 
 # Why did I make this?
 
-This was made as apart of my AP Computer Principles exam back in high school. This was my first project in javascript.
+This was made as apart of my AP Computer Principles exam back in high school. This was my first project in JavaScript and I by no means create advanced projects using this language.
 
 # How it works
 
